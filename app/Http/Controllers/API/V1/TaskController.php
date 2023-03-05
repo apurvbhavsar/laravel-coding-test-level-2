@@ -5,14 +5,18 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Task\CreateRequest;
 use App\Models\Task;
+use App\Models\User;
+use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
     public function index()
     {
-        $tasks = Task::all();
-
-        return $this->success($tasks, 'Task list', 200);
+        $tasks = new Task;
+        if(auth()->user()->hasRole('Team Member')) {
+            $tasks = $tasks->where('user_id', auth()->user()->id);
+        }
+        return $this->success($tasks->get(), 'Task list', 200);
     }
 
     public function store(CreateRequest $request)
@@ -48,5 +52,41 @@ class TaskController extends Controller
         }
 
         return $this->error('Something went wrong');
+    }
+
+    public function assignTask(Task $task, User $user)
+    {
+        if (!$this->authorize('update', $task)) {
+            return $this->error('You can not assign user to this project', 403);
+        }
+
+        if(!$user->hasRole('Team Member')) {
+            return $this->error('User not a team member', 403);
+        }
+
+        if ($task->status !== 'NOT_STARTED') {
+            return $this->error('Task status has been updated, You can not assign new user', 403);
+        }
+
+        $task->user_id = $user->id;
+        $task->save();
+
+        return $this->success('User assigned successfully', 200);
+    }
+
+    public function updateStatus(Task $task, Request $request)
+    {
+        if(!$this->authorize('update', $task)){
+            return $this->error('You can not update this task', 403);
+        }
+
+        if ($task->status !== 'NOT_STARTED') {
+            return $this->error('Task status has been updated, You can not assign new user', 403);
+        }
+
+        $task->status = $request->status;
+        $task->save();
+
+        return $this->success('Task status updated', 200);
     }
 }

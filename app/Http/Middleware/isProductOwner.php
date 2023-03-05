@@ -6,7 +6,7 @@ use App\Traits\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
 
-class isAdmin
+class isProductOwner
 {
     use ApiResponse;
     /**
@@ -18,9 +18,11 @@ class isAdmin
      */
     public function handle(Request $request, Closure $next)
     {
-        if(auth()->user()->hasRole('Admin')) {
+        if (auth()->user()->hasRole('Product Owner')) {
             return $next($request);
         }
+
         return $this->error('Unauthorized access', 403);
+
     }
 }
